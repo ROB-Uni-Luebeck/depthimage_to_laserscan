@@ -42,6 +42,10 @@
 #include <dynamic_reconfigure/server.h>
 #include <depthimage_to_laserscan/DepthConfig.h>
 
+#include "tf/transform_listener.h"
+#include "tf/message_filter.h"
+#include "message_filters/subscriber.h"
+
 #include <depthimage_to_laserscan/DepthImageToLaserScan.h>
 
 namespace depthimage_to_laserscan
@@ -54,6 +58,11 @@ namespace depthimage_to_laserscan
     ~DepthImageToLaserScanROS();
 
   private:
+	// Variables for checking if TF is available 
+  	tf::TransformListener tf_;
+	std::string target_frame_;
+	std::string source_frame_;
+	
     /**
      * Callback for image_transport
      * 

@@ -35,7 +35,7 @@
 
 using namespace depthimage_to_laserscan;
   
-DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::NodeHandle& pnh):pnh_(pnh), it_(n), srv_(pnh) {
+DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::NodeHandle& pnh):pnh_(pnh), it_(n), srv_(pnh), tf_(), target_frame_("map"), source_frame_("neck_center_body_yaw_frame")  {
   boost::mutex::scoped_lock lock(connect_mutex_);
   
   // Dynamic Reconfigure
@@ -55,14 +55,24 @@ DepthImageToLaserScanROS::~DepthImageToLaserScanROS(){
 
 void DepthImageToLaserScanROS::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	      const sensor_msgs::CameraInfoConstPtr& info_msg){
-  try
+			  
+  ros::Time time_(depth_msg->header.stamp.sec, depth_msg->header.stamp.nsec);
+  ros::Duration timeout_(0.05);
+  
+  if (tf_.waitForTransform (target_frame_, source_frame_, time_, timeout_, ros::Duration(0.1), NULL)) 
   {
-    sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(depth_msg, info_msg);
-    pub_.publish(scan_msg);
+    try
+    {
+      sensor_msgs::LaserScanPtr scan_msg = dtl_.convert_msg(depth_msg, info_msg);
+      pub_.publish(scan_msg);
+    }
+    catch (std::runtime_error& e)
+    {
+      ROS_ERROR_THROTTLE(1.0, "Could not convert depth image to laserscan: %s", e.what());
+    }
   }
-  catch (std::runtime_error& e)
-  {
-    ROS_ERROR_THROTTLE(1.0, "Could not convert depth image to laserscan: %s", e.what());
+  else {
+ 	ROS_WARN("Reject Laser Scan, no TF in time 0.05 found!");
   }
 }
 
